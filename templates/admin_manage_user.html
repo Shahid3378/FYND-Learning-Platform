@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>User Management</h2>
+    <p>Manage users on the platform.</p>
+
+    <!-- List of Users -->
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+                <tr>
+                    <td>{{ user.username }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                        <a href="{{ url_for('admin_edit_user', user_id=user.id) }}" class="btn btn-primary">Edit</a>
+                        <a href="{{ url_for('admin_delete_user', user_id=user.id) }}" class="btn btn-danger">Delete</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ url_for('admin_add_user') }}" class="btn btn-success">Add New User</a>
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %} {% block content %}
+    <div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
+        <div class="carousel-inner">
+        <div class="carousel-item active">
+            <img src="{{url_for('static', filename='img/contact.jpg')}}" class="d-block w-100" alt="contact" />
+        </div>
+    </div>
+<div class="container mt-5" style="
+    border: 1px solid #ccc;
+    padding: 50px;
+    border-radius: 10px;
+    width: auto;
+    height: auto;
+  ">
+    <h1>Contact Us</h1>
+    <p>
+        If you have any questions, feedback, or inquiries, please fill out the form
+        below, and we will get back to you as soon as possible.
+    </p>
+
+    <form action="/contact" method="post">
+        <div class="mb-3">
+            <label for="name" class="form-label">Name</label>
+            <input type="text" class="form-control" id="name" required />
+        </div>
+        <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" required />
+        </div>
+        <div class="mb-3">
+            <label for="message" class="form-label">Message</label>
+            <textarea class="form-control" id="message" rows="4" required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Send Message</button>
+    </form>
+</div>
+
+{% endblock %}

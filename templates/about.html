@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
+    <div class="carousel-inner">
+      <div class="carousel-item active">
+        <img src="{{url_for('static', filename='img/about.jpeg')}}" class="d-block w-100" alt="about" />
+    </div>
+</div>
+    <div class="container mt-5" style="
+    border: 1px solid #ccc;
+    padding: 50px;
+    border-radius: 10px;
+    width:auto;
+    height: auto;
+  ">
+        <h1>About Us</h1>
+        <p>Welcome to My_Academy, your go-to platform for online learning. Our mission is to provide high-quality educational resources that empower learners to achieve their goals.</p>
+
+        <h2>Our Mission</h2>
+        <p>At My_Academy, we believe in the power of education to transform lives. Our mission is to make learning accessible to everyone, everywhere. We strive to create a supportive and engaging environment where learners can thrive.</p>
+
+        <h2>What We Offer</h2>
+        <ul>
+            <li>Comprehensive courses across various subjects.</li>
+            <li>Interactive lessons and quizzes to enhance learning.</li>
+            <li>Progress tracking to help you stay on course.</li>
+            <li>A community of learners and instructors for support.</li>
+        </ul>
+
+        <h2>Join Us</h2>
+        <p>Whether you're looking to advance your career, learn a new skill, or explore a new hobby, My_Academy has something for you. Sign up today and start your learning journey!</p>
+    </div>
+
+    <br>
+    
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container mt-5" style="border: 1px solid #ccc; padding: 50px; border-radius: 10px; ">
+    <h1>Your Progress</h1>
+    <p>Here is an overview of your progress in the courses you are enrolled in:</p>
+
+    <!-- Enrolled Courses Section -->
+    <h2>Enrolled Courses</h2>
+    {% if progress and progress|length > 0 %}
+        <div class="list-group">
+            {% for course_progress in progress %}
+            <a href="{{ url_for('course_content', course_id=course_progress['course_id']) }}" class="list-group-item list-group-item-action">
+                <h5 class="mb-1">{{ course_progress['course_title'] }}</h5>
+                <p class="mb-1">
+                    Completed Lessons: {{ course_progress['lessons_completed'] }} / {{ course_progress['total_lessons'] }}
+                </p>
+                <small>Quiz Score: {{ course_progress['quiz_score'] }}%</small>
+            </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>You have not made any progress in your enrolled courses yet.</p>
+        <a href="{{ url_for('course_list') }}" class="btn btn-primary mt-3" aria-label="Browse available courses">Browse Courses</a>
+    {% endif %}
+
+    <!-- Overall Progress Section -->
+    <h2 class="mt-4">Overall Progress</h2>
+    {% if overall_progress is not none %}
+    <div class="progress">
+        <div class="progress-bar" role="progressbar" style="width: {{ overall_progress }}%;" 
+            aria-valuenow="{{ overall_progress }}" aria-valuemin="0" aria-valuemax="100" 
+            aria-label="Overall progress of {{ overall_progress }} percent">
+            {{ overall_progress }}%
+        </div>
+    </div>
+    {% else %}
+        <p>Overall progress cannot be calculated yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
