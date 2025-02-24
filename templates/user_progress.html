@@ -1,42 +1,80 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
 {% block content %}
-
-<div class="container mt-5" style="border: 1px solid #ccc; padding: 50px; border-radius: 10px; ">
-    <h1>Your Progress</h1>
-    <p>Here is an overview of your progress in the courses you are enrolled in:</p>
+<div class="container mt-5">
+    <h2 class="text-center text-primary">{{ user.fname }}'s Learning Progress</h2>
 
     <!-- Enrolled Courses Section -->
-    <h2>Enrolled Courses</h2>
-    {% if progress and progress|length > 0 %}
-        <div class="list-group">
-            {% for course_progress in progress %}
-            <a href="{{ url_for('course_content', course_id=course_progress['course_id']) }}" class="list-group-item list-group-item-action">
-                <h5 class="mb-1">{{ course_progress['course_title'] }}</h5>
-                <p class="mb-1">
-                    Completed Lessons: {{ course_progress['lessons_completed'] }} / {{ course_progress['total_lessons'] }}
-                </p>
-                <small>Quiz Score: {{ course_progress['quiz_score'] }}%</small>
-            </a>
+    <h3 class="mt-4">Enrolled Courses</h3>
+    {% if enrolled_courses %}
+        <ul class="list-group">
+            {% for enrollment in enrolled_courses %}
+                <li class="list-group-item">
+                    <h5>{{ enrollment.course.title }}</h5>
+                    <p>{{ enrollment.course.description }}</p>
+
+                    <!-- List Lessons -->
+                    <h6>Lessons:</h6>
+                    <ul>
+                        {% for lesson in enrollment.course.lessons %}
+                            <li>{{ lesson.title }}</li>
+                        {% endfor %}
+                    </ul>
+
+                    <!-- Certificate Generation Button per Course -->
+                    {% set completed = quiz_results | selectattr("quiz.course_id", "equalto", enrollment.course.id) 
+                        | selectattr("passing_score", "equalto", quiz_results[0].total_questions) | list %}
+                    
+                    {% if completed %}
+                        <a href="{{ url_for('certificate', user_id=user.id, course_id=enrollment.course.id) }}" class="btn btn-success mt-2">
+                            Generate Certificate
+                        </a>
+                    {% endif %}
+                </li>
             {% endfor %}
-        </div>
+        </ul>
     {% else %}
-        <p>You have not made any progress in your enrolled courses yet.</p>
-        <a href="{{ url_for('course_list') }}" class="btn btn-primary mt-3" aria-label="Browse available courses">Browse Courses</a>
+        <p>You haven't enrolled in any courses yet.</p>
     {% endif %}
 
-    <!-- Overall Progress Section -->
-    <h2 class="mt-4">Overall Progress</h2>
-    {% if overall_progress is not none %}
-    <div class="progress">
-        <div class="progress-bar" role="progressbar" style="width: {{ overall_progress }}%;" 
-            aria-valuenow="{{ overall_progress }}" aria-valuemin="0" aria-valuemax="100" 
-            aria-label="Overall progress of {{ overall_progress }} percent">
-            {{ overall_progress }}%
-        </div>
-    </div>
+    <!-- Quiz Results Section -->
+    <h3 class="mt-4">Quiz Results</h3>
+    {% if quiz_results %}
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Quiz Title</th>
+                    <th>Score</th>
+                    <th>Total Questions</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in quiz_results %}
+                <tr>
+                    <td>{{ result.quiz.title }}</td>
+                    <td>{{ result.passing_score }}</td>
+                    <td>{{ result.total_questions }}</td>
+                    <td>
+                        {% if result.passing_score == result.total_questions %}
+                            <span class="text-success">Completed</span>
+                        {% elif result.passing_score > (result.total_questions / 2) %}
+                            <span class="text-warning">Partial Completion</span>
+                        {% else %}
+                            <span class="text-danger">In Progress</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     {% else %}
-        <p>Overall progress cannot be calculated yet.</p>
+        <p>No quiz attempts recorded yet.</p>
     {% endif %}
+
+    <!-- Back to Dashboard -->
+    <div class="text-center mt-4">
+        <a href="{{ url_for('user_dashboard') }}" class="btn btn-primary">Back to Dashboard</a>
+    </div>
 </div>
 {% endblock %}

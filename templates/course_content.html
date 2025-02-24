@@ -1,55 +1,48 @@
-{% extends 'base.html' %} 
-{% block content %}
-
-<div class="container mt-5">
-  <h1>{{course.title}}</h1>
-  <p>{{course.description}}</p>
-
-  <h2>Lessons</h2>
-  <hr>
-  <ul class="list-group">
-    {% for lesson in course.lessons %}
-    <li class="col-md-4 mb-4">
-      <div >
-        <div >
-          <h5 class="card-title">{{ lesson.title }}</h5>
-          <br>
-          <!-- <p class="card-text">{{ lesson.description }}</p> -->
-          
-          <img src="{{ url_for('static', filename='img/html_css_icon.jpeg') }}"  alt="html css icon" class="img-thumbnail">
-          <br> <br>
-          {% if user and user.is_enrolled(course) %}
-          <a href="{{ url_for('start_lesson', course_id=course.id, lesson_id=lesson.id) }}" class="btn btn-primary">Start Lesson</a>
-          {% else %}
-          <p class="text-danger">You need to enroll in this course to start the lessons.</p>
-          {% endif %}
-        </div>
-      </div>
-    </li>
-    <!-- <a href="{{ url_for('start_lesson', course_id=course.id, lesson_id=lesson.id) }}" class="btn btn-primary">Start Lesson</a> -->
-    {% endfor %}
-    <div class="text-center mt-4">
-      <a href="{{ url_for('course_list') }}" class="btn btn-outline-secondary">Back to Courses</a>
-    </div>
-</ul>
-
-</div>
-
-{% endblock %}
-'''
-start_lesson.html
-'''
 {% extends 'base.html' %}
 
 {% block content %}
 <div class="container mt-5">
-    <h1>{{ lesson.title }}</h1>
-    <p>{{ lesson.description }}</p>
-    <p>{{ lesson.content }}</p>
-    <p><a href="{{ lesson.course_link }}" target="_blank">Course Link</a></p>
+    <h1>{{ course.title }}</h1>
+    <p>{{ course.description }}</p>
 
+    <!-- Course Thumbnail -->
+    {% if course.course_thumbnail %}
+    <div class="text-center my-4">
+        <img src="{{ url_for('static', filename='img/' + course.course_thumbnail) }}" alt="{{ course.title }}" class="img-fluid rounded">
+    </div>
+    {% endif %}
+
+    <!-- Lessons Section -->
+    <h2 class="mt-5">Lessons</h2>
+    {% if course.lessons %}
+    <ul class="list-group">
+        {% for lesson in course.lessons %}
+            <li class="list-group-item">
+                <h5>{{ lesson.title }}</h5>
+            </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+        <p>No lessons available for this course yet.</p>
+    {% endif %}
+
+    {% if is_enrolled %}
+        <div class="text-center mt-3">
+            <a href="{{ url_for('course_lesson', course_id=course.id, lesson_id=course.lessons[0].id) }}" class="btn btn-primary">
+                Start Lesson
+            </a>
+        </div>
+    {% else %}
+        <div class="text-center mt-3">
+            <form action="{{ url_for('enroll_in_course', course_id=course.id) }}" method="POST">
+                <button type="submit" class="btn btn-success">Enroll Now</button>
+            </form>
+            <p class="text-muted mt-2">You must enroll to start the lessons.</p>
+        </div>
+    {% endif %}
+    <!-- Back to Courses Button -->
     <div class="text-center mt-4">
-        <a href="{{ url_for('course_content', course_id=course_id) }}" class="btn btn-outline-secondary">Back to Course</a>
+        <a href="{{ url_for('course_list') }}" class="btn btn-outline-secondary">Back to Courses</a>
     </div>
 </div>
 {% endblock %}

@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>{{ lesson.title }}</h1>
+    <p>{{ lesson.content }}</p>
+
+    {% if course.lessons %}
+        <div class="list-group mt-4">
+            {% for lesson in course.lessons %}
+                <div class="list-group-item">
+                    <h5>{{ lesson.title }}</h5>
+                    <p>{{ lesson.content }}</p>
+                    <a href="{{ lesson.course_link }}" target="_blank" class="btn btn-info">View Course Materials</a>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>No lessons available.</p>
+    {% endif %}
+    
+
+    <div class="text-center mt-4">
+        <a href="{{ url_for('submit_quiz', course_id=course.id, lesson_id=lesson.id) }}" class="btn btn-warning">Start Quiz</a>
+    </div>
+
+    <div class="text-center mt-4">
+        <a href="{{ url_for('course_content', course_id=course_id) }}" class="btn btn-outline-secondary">Back to Course</a>
+    </div>
+</div>
+{% endblock %}

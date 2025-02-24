@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center text-primary">Update Course</h2>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" enctype="multipart/form-data">
+        <!-- Course Title -->
+        <div class="mb-3">
+            <label for="title" class="form-label">Course Title</label>
+            <input type="text" class="form-control" id="title" name="title" value="{{ course.title }}" required>
+        </div>
+
+        <!-- Course Description -->
+        <div class="mb-3">
+            <label for="description" class="form-label">Course Description</label>
+            <textarea class="form-control" id="description" name="description" rows="3" required>{{ course.description }}</textarea>
+        </div>
+
+        <!-- Course Thumbnail -->
+        <div class="mb-3">
+            <label for="course_thumbnail" class="form-label">Course Thumbnail</label>
+            <input type="file" class="form-control" id="course_thumbnail" name="course_thumbnail">
+            {% if course.course_thumbnail %}
+                <img src="{{ url_for('static', filename='img/' + course.course_thumbnail) }}" class="img-thumbnail mt-2" width="200" alt="Current Thumbnail">
+            {% endif %}
+        </div>
+
+        <hr>
+
+        <!-- Lessons Section -->
+        <h4 class="text-secondary">Lessons</h4>
+        <div id="lessons-container">
+            {% for lesson in course.lessons %}
+                <div class="lesson-item border rounded p-3 mb-3">
+                    <input type="hidden" name="lesson_id[]" value="{{ lesson.id }}">
+                    <div class="mb-2">
+                        <label class="form-label">Lesson Title</label>
+                        <input type="text" class="form-control" name="lesson_title[]" value="{{ lesson.title }}" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Lesson Content</label>
+                        <textarea class="form-control" name="lesson_content[]" required>{{ lesson.content }}</textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Course Link</label>
+                        <input type="text" class="form-control" name="lesson_link[]" value="{{ lesson.course_link }}" required>
+                    </div>
+                    <button type="button" class="btn btn-danger btn-sm remove-lesson">Remove Lesson</button>
+                </div>
+            {% endfor %}
+        </div>
+        <button type="button" class="btn btn-success btn-sm mt-2" id="add-lesson">Add Lesson</button>
+
+        <hr>
+
+        <!-- Quiz Section -->
+        <!-- <h4 class="text-secondary">Quiz Questions</h4>
+        <div id="quiz-container">
+            {% for question in course.quizzes %}
+                <div class="quiz-item border rounded p-3 mb-3">
+                    <input type="hidden" name="quiz_id[]" value="{{ question.id }}">
+                    <div class="mb-2">
+                        <label class="form-label">Question</label>
+                        <input type="text" class="form-control" name="quiz_question[]" value="{{ question.title }}" required>
+                    </div> -->
+                    <!-- <div class="row">
+                        <div class="col">
+                            <label class="form-label">Option A</label>
+                            <input type="text" class="form-control" name="option_A[]" value="{{ question.option_A }}" required>
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Option B</label>
+                            <input type="text" class="form-control" name="option_B[]" value="{{ question.option_B }}" required>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col">
+                            <label class="form-label">Option C</label>
+                            <input type="text" class="form-control" name="option_C[]" value="{{ question.option_C }}" required>
+                        </div>
+                        <div class="col">
+                            <label class="form-label">Option D</label>
+                            <input type="text" class="form-control" name="option_D[]" value="{{ question.option_D }}" required>
+                        </div>
+                    </div>
+                    <div class="mb-2 mt-2">
+                        <label class="form-label">Correct Answer</label>
+                        <input type="text" class="form-control" name="correct_answer[]" value="{{ question.answer }}" required>
+                    </div>
+                    <button type="button" class="btn btn-danger btn-sm remove-quiz">Remove Question</button>
+                </div>
+            {% endfor %}
+        </div>
+        <button type="button" class="btn btn-success btn-sm mt-2" id="add-quiz">Add Quiz Question</button> -->
+
+        <!-- <hr> -->
+
+        <!-- Submit and Back Buttons -->
+        
+    </form>
+    <div class="d-flex justify-content-between">
+        <a href="{{ url_for('admin_manage_courses') }}" class="btn btn-secondary">Back</a>
+        <button type="submit" class="btn btn-primary">Update Course</button>
+    </div>
+</div>
+
+<!-- JavaScript for Adding/Removing Lessons and Quiz Questions -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Adding Lessons
+    document.getElementById("add-lesson").addEventListener("click", function () {
+        let container = document.getElementById("lessons-container");
+        let lessonItem = document.createElement("div");
+        lessonItem.classList.add("lesson-item", "border", "rounded", "p-3", "mb-3");
+        lessonItem.innerHTML = `
+            <div class="mb-2">
+                <label class="form-label">Lesson Title</label>
+                <input type="text" class="form-control" name="lesson_title[]" required>
+            </div>
+            <div class="mb-2">
+                <label class="form-label">Lesson Content</label>
+                <textarea class="form-control" name="lesson_content[]" required></textarea>
+            </div>
+            <div class="mb-2">
+                <label class="form-label">Course Link</label>
+                <input type="text" class="form-control" name="lesson_link[]" required>
+            </div>
+            <button type="button" class="btn btn-danger btn-sm remove-lesson">Remove Lesson</button>
+        `;
+        container.appendChild(lessonItem);
+    });
+
+    // Removing Lessons
+    document.getElementById("lessons-container").addEventListener("click", function (event) {
+        if (event.target.classList.contains("remove-lesson")) {
+            event.target.parentElement.remove();
+        }
+    });
+
+    // Adding Quiz Questions
+    document.getElementById("add-quiz").addEventListener("click", function () {
+        let container = document.getElementById("quiz-container");
+        let quizItem = document.createElement("div");
+        quizItem.classList.add("quiz-item", "border", "rounded", "p-3", "mb-3");
+        quizItem.innerHTML = `
+            <div class="mb-2">
+                <label class="form-label">Question</label>
+                <input type="text" class="form-control" name="quiz_question[]" required>
+            </div>
+            <div class="row">
+                <div class="col">
+                    <label class="form-label">Option A</label>
+                    <input type="text" class="form-control" name="option_A[]" required>
+                </div>
+                <div class="col">
+                    <label class="form-label">Option B</label>
+                    <input type="text" class="form-control" name="option_B[]" required>
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col">
+                    <label class="form-label">Option C</label>
+                    <input type="text" class="form-control" name="option_C[]" required>
+                </div>
+                <div class="col">
+                    <label class="form-label">Option D</label>
+                    <input type="text" class="form-control" name="option_D[]" required>
+                </div>
+            </div>
+            <div class="mb-2 mt-2">
+                <label class="form-label">Correct Answer</label>
+                <input type="text" class="form-control" name="correct_answer[]" required>
+            </div>
+            <button type="button" class="btn btn-danger btn-sm remove-quiz">Remove Question</button>
+        `;
+        container.appendChild(quizItem);
+    });
+
+    // Removing Quiz Questions
+    document.getElementById("quiz-container").addEventListener("click", function (event) {
+        if (event.target.classList.contains("remove-quiz")) {
+            event.target.parentElement.remove();
+        }
+    });
+});
+</script>
+
+{% endblock %}

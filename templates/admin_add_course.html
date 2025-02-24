@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center text-white bg-dark py-3 rounded">Add New Course</h1>
+
+    <div class="card shadow-lg p-4">
+        <form action="{{ url_for('admin_add_course') }}" method="POST" enctype="multipart/form-data">
+            
+            <!-- Course Title -->
+            <div class="mb-3">
+                <label for="title" class="form-label"><strong>Course Title</strong></label>
+                <input type="text" class="form-control" id="title" name="title" placeholder="Enter course title" required>
+            </div>
+
+            <!-- Course Description -->
+            <div class="mb-3">
+                <label for="description" class="form-label"><strong>Course Description</strong></label>
+                <textarea class="form-control" id="description" name="description" rows="3" placeholder="Write a short course description" required></textarea>
+            </div>
+
+            <!-- Course Thumbnail -->
+            <div class="mb-3">
+                <label for="course_thumbnail" class="form-label"><strong>Upload Course Thumbnail</strong></label>
+                <input type="file" class="form-control" id="course_thumbnail" name="course_thumbnail" accept="image/*">
+            </div>
+
+            <!-- Lessons Section -->
+            <h4 class="mt-4">Lessons</h4>
+            <div id="lesson-list">
+                <div class="lesson-item mb-3">
+                    <input type="text" class="form-control mb-2" name="lesson_title[]" placeholder="Lesson Title" required>
+                    <textarea class="form-control mb-2" name="lesson_content[]" placeholder="Lesson Content" required></textarea>
+                    <input type="url" class="form-control mb-2" name="lesson_link[]" placeholder="Lesson Link (Video/Material)" required>
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-secondary mb-3" onclick="addLesson()">
+                <i class="fas fa-plus"></i> Add Another Lesson
+            </button>
+
+            <!-- Quiz Section -->
+            <!-- <h4 class="mt-4">Quizzes</h4>
+            <div id="quiz-list">
+                <div class="quiz-item mb-3">
+                    <input type="text" class="form-control mb-2" name="quiz_question[]" placeholder="Quiz Question" required>
+                    <input type="text" class="form-control mb-2" name="option_A[]" placeholder="Option A" required>
+                    <input type="text" class="form-control mb-2" name="option_B[]" placeholder="Option B" required>
+                    <input type="text" class="form-control mb-2" name="option_C[]" placeholder="Option C" required>
+                    <input type="text" class="form-control mb-2" name="option_D[]" placeholder="Option D" required>
+                    <select class="form-control mb-2" name="correct_answer[]">
+                        <option value="A">Correct Answer: A</option>
+                        <option value="B">Correct Answer: B</option>
+                        <option value="C">Correct Answer: C</option>
+                        <option value="D">Correct Answer: D</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-secondary mb-3" onclick="addQuiz()">
+                <i class="fas fa-plus"></i> Add Another Question
+            </button> -->
+
+            <!-- Action Buttons -->
+            <div class="d-flex justify-content-between">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Add Course
+                </button>
+            </div>
+        </form>
+    </div>
+    <div class="text-center mt-4">
+        <a href="{{ url_for('admin_manage_courses') }}" class="btn btn-secondary">Back</a>
+    </div>
+</div>
+
+<script>
+    function addLesson() {
+        let lessonList = document.getElementById('lesson-list');
+        let newLesson = document.createElement('div');
+        newLesson.classList.add('lesson-item', 'mb-3');
+        newLesson.innerHTML = `
+            <input type="text" class="form-control mb-2" name="lesson_title[]" placeholder="Lesson Title" required>
+            <textarea class="form-control mb-2" name="lesson_content[]" placeholder="Lesson Content" required></textarea>
+            <input type="url" class="form-control mb-2" name="lesson_link[]" placeholder="Lesson Link (Video/Material)" required>
+            <button type="button" class="btn btn-danger btn-sm" onclick="removeLesson(this)">Remove</button>
+        `;
+        lessonList.appendChild(newLesson);
+    }
+
+    function removeLesson(button) {
+        button.parentElement.remove();
+    }
+
+    function addQuiz() {
+        let quizList = document.getElementById('quiz-list');
+        let newQuiz = document.createElement('div');
+        newQuiz.classList.add('quiz-item', 'mb-3');
+        newQuiz.innerHTML = `
+            <input type="text" class="form-control mb-2" name="quiz_question[]" placeholder="Quiz Question" required>
+            <input type="text" class="form-control mb-2" name="option_A[]" placeholder="Option A" required>
+            <input type="text" class="form-control mb-2" name="option_B[]" placeholder="Option B" required>
+            <input type="text" class="form-control mb-2" name="option_C[]" placeholder="Option C" required>
+            <input type="text" class="form-control mb-2" name="option_D[]" placeholder="Option D" required>
+            <select class="form-control mb-2" name="correct_answer[]">
+                <option value="A">Correct Answer: A</option>
+                <option value="B">Correct Answer: B</option>
+                <option value="C">Correct Answer: C</option>
+                <option value="D">Correct Answer: D</option>
+            </select>
+            <button type="button" class="btn btn-danger btn-sm" onclick="removeQuiz(this)">Remove</button>
+        `;
+        quizList.appendChild(newQuiz);
+    }
+
+    function removeQuiz(button) {
+        button.parentElement.remove();
+    }
+</script>
+{% endblock %}

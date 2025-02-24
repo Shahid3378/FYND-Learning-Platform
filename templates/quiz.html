@@ -1,19 +1,57 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 
 {% block content %}
-<h1>{{ quiz.title }}</h1>
-<form method="POST">
-    {% for question in questions %}
-    <fieldset>
-        <legend>{{ question.question }}</legend>
-        {% for option in question.option.split(",") %}
-        <label>
-            <input type="radio" name="answers_{{ question.id }}" value="{{ option.strip() }}" required>
-            {{ option.strip() }}
-        </label><br>
-        {% endfor %}
-    </fieldset>
-    {% endfor %}
-    <button type="submit" class="btn btn-primary mt-3">Submit Quiz</button>
-</form>
+<div class="container mt-5">
+    <h2 class="text-center text-primary">{{ course.title }} - Quiz</h2>
+
+    {% if course.quizzes %}
+        <form method="POST" action="{{ url_for('submit_quiz', course_id=course.id, lesson_id=course.lessons[0].id if course.lessons else 0) }}">
+            
+            {% for quiz in course.quizzes %}
+                <h3 class="text-secondary">{{ quiz.title }}</h3>
+
+                {% if quiz.quiz_questions %}
+                    {% for question in quiz.quiz_questions %}
+                    <div class="card my-3">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ loop.index }}. {{ question.question }}</h5>
+
+                            <!-- Quiz Options -->
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="answer_{{ question.id }}" value="A" required>
+                                <label class="form-check-label">{{ question.option_A }}</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="answer_{{ question.id }}" value="B">
+                                <label class="form-check-label">{{ question.option_B }}</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="answer_{{ question.id }}" value="C">
+                                <label class="form-check-label">{{ question.option_C }}</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="answer_{{ question.id }}" value="D">
+                                <label class="form-check-label">{{ question.option_D }}</label>
+                            </div>                            
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">No questions available for this quiz.</p>
+                {% endif %}
+
+            {% endfor %}
+
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-success">Submit Quiz</button>
+            </div>
+        </form>
+    {% else %}
+        <p class="text-center text-muted">No quizzes available for this course yet.</p>
+    {% endif %}
+
+    <div class="text-center mt-3">
+        <a href="{{ url_for('course_list') }}" class="btn btn-outline-secondary">Back to Courses</a>
+    </div>
+</div>
 {% endblock %}

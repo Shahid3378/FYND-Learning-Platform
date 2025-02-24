@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="text-center text-primary">Add New User</h2>
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST">
+        <!-- First Name -->
+        <div class="mb-3">
+            <label for="fname" class="form-label">First Name</label>
+            <input type="text" class="form-control" id="fname" name="fname" placeholder="Enter first name" required>
+        </div>
+
+        <!-- Last Name -->
+        <div class="mb-3">
+            <label for="lname" class="form-label">Last Name</label>
+            <input type="text" class="form-control" id="lname" name="lname" placeholder="Enter last name" required>
+        </div>
+
+        <!-- Username -->
+        <div class="mb-3">
+            <label for="username" class="form-label">Username</label>
+            <input type="text" class="form-control" id="username" name="username" placeholder="Enter username" required>
+        </div>
+
+        <!-- Email -->
+        <div class="mb-3">
+            <label for="email" class="form-label">Email</label>
+            <input type="email" class="form-control" id="email" name="email" placeholder="Enter email" required>
+        </div>
+
+        <!-- Password -->
+        <div class="mb-3">
+            <label for="password" class="form-label">Password</label>
+            <input type="password" class="form-control" id="password" name="password" placeholder="Enter password" required>
+        </div>
+
+        <!-- Role -->
+        <div class="mb-3">
+            <label for="role" class="form-label">Role</label>
+            <select class="form-select" id="role" name="role" required>
+                <option value="user" selected>User</option>
+                <option value="admin">Admin</option>
+            </select>
+        </div>
+
+        <!-- Enroll in Courses -->
+        <div class="mb-3">
+            <label for="enrolled_courses" class="form-label">Enroll in Courses</label>
+            <select multiple class="form-select" name="enrolled_courses[]">
+                {% for course in courses %}
+                    <option value="{{ course.id }}">{{ course.title }}</option>
+                {% endfor %}
+            </select>
+            <small class="form-text text-muted">Hold Ctrl (Cmd on Mac) to select multiple courses.</small>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="text-center">
+            <button type="submit" class="btn btn-success">Add User</button>
+            <a href="{{ url_for('admin_manage_users') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

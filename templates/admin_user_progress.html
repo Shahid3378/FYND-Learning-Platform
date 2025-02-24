@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2>Progress Report for {{ user.username }}</h2>
+
+    <h4 class="mt-4">Enrolled Courses:</h4>
+    {% if enrollments %}
+        <ul class="list-group">
+            {% for enrollment in enrollments %}
+                <li class="list-group-item">
+                    <strong>{{ enrollment.course.title }}</strong>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="text-muted">No courses enrolled.</p>
+    {% endif %}
+
+    <h4 class="mt-4">Quiz Results:</h4>
+    {% if quiz_results %}
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Quiz</th>
+                    <th>Score</th>
+                    <th>Total Questions</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in quiz_results %}
+                    <tr>
+                        <td>{{ result.quiz.title }}</td>
+                        <td>{{ result.passing_score }}</td>
+                        <td>{{ result.total_questions }}</td>
+                        <td>
+                            {% if result.passing_score == result.total_questions %}
+                                <span class="text-success">Completed</span>
+                            {% elif result.passing_score > (result.total_questions / 2) %}
+                                <span class="text-warning">Partial Completion</span>
+                            {% else %}
+                                <span class="text-danger">In Progress</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="text-muted">No quiz results available.</p>
+    {% endif %}
+
+    <a href="{{ url_for('admin_manage_users') }}" class="btn btn-secondary mt-4">Back to User Management</a>
+</div>
+{% endblock %}

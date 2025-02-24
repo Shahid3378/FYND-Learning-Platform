@@ -4,40 +4,42 @@ from werkzeug.utils import secure_filename #type: ignore
 from io import BytesIO
 from werkzeug.security import generate_password_hash, check_password_hash   # type: ignore
 from database import session as db_session
-from models import Course, Users, Lesson,Question,QuizResult, Contact, Enrollment
+from models import Course, Users, Lesson,Question,Quiz, QuizResult, Contact, Enrollment
 import json
+from sqlalchemy.orm import joinedload
+from datetime import datetime
 
 app = Flask(__name__,
             template_folder='templates', 
             static_folder='static')
 app.config['SECRET_KEY'] = '9224ab35a0fb246961b5d55a' 
 
+admin = db_session.query(Users).filter_by(username="Shahid").first()
+if not admin:
+    db_session.add(Users(
+        fname="Shahid",
+        lname="Raja",
+        username="Shahid",
+        email="admin@gmail.com",
+        password=generate_password_hash("Flask@123"),
+        role="admin"
+    ))
+    db_session.commit()
+    print("✅ Admin user created successfully!")
 
-user_db = {}
+user = db_session.query(Users).filter_by(username="user1").first()
+if not user:
+    db_session.add(Users(
+        fname="User",
+        lname="1",
+        username="user1",
+        email="user1@gmail.com",
+        password=generate_password_hash("User1@123"),
+        role="user"
+    ))
+    db_session.commit()
+    print("✅ Default user created successfully!")
 
-admin_username = 'Shahid'
-admin_password = 'Flask@123'
-
-user_db[admin_username] = {
-    'fname': 'Shahid',
-    'lname': 'Raja',
-    'email': 'admin@gmail.com',
-    'password': generate_password_hash(admin_password),
-    'role' : 'admin'
-}
-
-default_user_username = 'user1'
-default_password = 'User1@123'
-
-if default_user_username not in user_db:
-    user_db[default_user_username] = {
-        'fname': 'User',
-        'lname': '1',
-        'email': 'user1@gmail.com',
-        'password': generate_password_hash(default_password),
-        'course': [],
-        'role' : 'user'
-    }
 #------------------------------------------------------------------------
 
 # Admin: Shahid
@@ -79,17 +81,16 @@ def login():
         username = request.form['username']
         password = request.form['password']
 
-        # user = db_session.query(Users).filter_by(username=username).first()
-        user = user_db.get(username)
+        user = db_session.query(Users).filter_by(username=username).first()
 
-        if user and check_password_hash(user['password'], password):
+        if user and check_password_hash(user.password, password):
             # login_user(user)
             session['username'] = username
-            session['role'] = user['role']
+            session['role'] = user.role
 
             flash("Login successful!", "success")
 
-            if user['role'] == 'admin':
+            if user.role == 'admin':
                 return redirect(url_for('admin_dashboard'))
             else:
                 return redirect(url_for('user_dashboard'))
@@ -114,35 +115,24 @@ def register():
             flash("Passwords do not match", "error")
             return redirect(url_for('register'))
         
-        # existing_user = db_session.query(Users).filter_by(username=username).first()
+        existing_user = db_session.query(Users).filter_by(username=username).first()
 
-        if username in user_db:
-            flash("Username already exists", "error")
+        if existing_user:
+            flash("Username or email already exists", "error")
             return redirect(url_for('register'))
         
         hashed_password = generate_password_hash(password)
 
-        role = 'user'
+        new_user = Users(
+                fname=fname, 
+                lname=lname, 
+                username=username, 
+                email=email, 
+                password=hashed_password, 
+                role="user"
+            )
 
-        user_db[username] = {
-            'fname': fname,
-            'lname': lname,
-            'email': email,
-            'password': hashed_password,
-            'role': role
-        }
-        # if Users.query.filter_by(username=username).first():
-        #     flash("Username already exists", "error")
-        #     return render_template('register.html',email=email)
-        # if Users.query.filter_by(email=email).first():
-        #     flash("Email already exists","error")
-        #     return render_template('register.html',username=username)
-        
-        # role = request.form.get('role', 'user')
-
-        # hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
-
-        new_user = Users(fname=fname, lname=lname,username=username, email=email, password=password_confirmation, role=role)
+        # new_user = Users(fname=fname, lname=lname,username=username, email=email, password=password_confirmation, role="user")
 
         # user = Users(username=username, email=email, password=password)
         db_session.add(new_user)
@@ -162,29 +152,142 @@ def course_list():
 
 @app.route('/enroll/<int:course_id>', methods=['POST'])
 def enroll_in_course(course_id):
-    try:
-        course = db_session.query(Course).get(course_id)
-        if request.method == 'POST':
-            user_id = request.form.get('user_id')  
-            user = Users.query.get_or_404(user_id)
+    if 'username' not in session:
+        flash("You must be logged in to enroll in a course.", "warning")
+        return redirect(url_for('login'))
 
-            existing_enrollment = Enrollment.query.filter_by(user_id=user.id, course_id=course.id).first()
+    # Fetch course and user
+    course = db_session.query(Course).get(course_id)
+    user = db_session.query(Users).filter_by(username=session['username']).first()
 
-            if existing_enrollment:
-                flash('You are already enrolled in this course.', 'info')
+    if not course:
+        flash("Course not found!", "danger")
+        return redirect(url_for('course_list'))
+    
+    if not user:
+        flash("User not found!", "danger")
+        return redirect(url_for('login'))
+
+    # Check if user is already enrolled
+    existing_enrollment = db_session.query(Enrollment).filter_by(user_id=user.id, course_id=course.id).first()
+
+    if existing_enrollment:
+        flash("You are already enrolled in this course.", "info")
+    else:
+        # Enroll the user
+        enrollment = Enrollment(user_id=user.id, course_id=course.id)
+        db_session.add(enrollment)
+        db_session.commit()
+        flash(f"Successfully enrolled in {course.title}!", "success")
+
+    return redirect(url_for('course_content', course_id=course.id))
+
+@app.route('/course/<int:course_id>/')
+def course_content(course_id):
+    if 'username' not in session:
+        return redirect(url_for('login'))
+    
+    course = db_session.query(Course).get(course_id)
+    if not course:
+        flash("Course not found!", "error")
+        return redirect(url_for('course_list'))
+    
+    user = db_session.query(Users).filter_by(username=session['username']).first()
+    if not user:
+            flash("User not found!", "error")
+            return redirect(url_for('login'))
+
+    is_enrolled = db_session.query(Enrollment).filter_by(user_id=user.id, course_id=course.id).first() is not None
+    if not is_enrolled:
+        flash("You need to enroll in this course to access lessons.", "warning")
+        # return redirect(url_for('course_list'))
+
+    return render_template('course_content.html', course=course, is_enrolled=is_enrolled)
+
+@app.route('/course/<int:course_id>/lesson/<int:lesson_id>/')
+def course_lesson(course_id, lesson_id):
+    course = db_session.query(Course).get(course_id)
+    lesson = db_session.query(Lesson).get(lesson_id)
+
+    if not course:
+        flash("Course not found!", "error")
+        return redirect(url_for('course_list'))
+
+    if not lesson:
+        flash("Lesson not found!", "error")
+        return redirect(url_for('course_content', course_id=course_id))
+
+    return render_template('course_lesson.html', course=course, lesson=lesson, course_id=course_id)
+
+
+@app.route('/course/<int:course_id>/quiz/')
+def course_quiz(course_id):
+    course = db_session.query(Course).options(joinedload(Course.quizzes).joinedload(Quiz.quiz_questions)).filter_by(id=course_id).first()
+
+    if not course:
+        flash('Course not found!', 'danger')
+        return redirect(url_for('course_list'))
+    
+    print("Course:", course.title)
+    for quiz in course.quizzes:
+        print("Quiz:", quiz.title)
+        for question in quiz.quiz_questions:
+            print("Question:", question.question)
+
+    return render_template('quiz.html', course=course)
+
+
+@app.route('/course/<int:course_id>/lesson/<int:lesson_id>/quiz/', methods=['GET', 'POST'])
+def submit_quiz(course_id, lesson_id):
+    if 'username' not in session:
+        flash('You must be logged in to attempt quizzes.', 'error')
+        return redirect(url_for('login'))
+
+    course = db_session.query(Course).get(course_id)
+    lesson = db_session.query(Lesson).get(lesson_id)
+    user = db_session.query(Users).filter_by(username=session['username']).first()
+
+    if not course or not lesson or not user:
+        flash("Course, lesson or user not found!", "error")
+        return redirect(url_for('course_list'))
+    
+    if request.method == 'POST':
+        score = 0
+        total_questions = 0 #len(course.quizzes)
+
+        for quiz in course.quizzes:
+            for question in quiz.quiz_questions:
+                selected_answer = request.form.get(f'answer_{question.id}')
+                print(f"Selected: {selected_answer}, Correct: {question.answer}")
+
+                if selected_answer == question.answer:
+                    score += 1
+                total_questions += 1
+
+            existing_result = db_session.query(QuizResult).filter_by(user_id=user.id, quiz_id=quiz.id).first()
+
+            if existing_result:
+                # Update the existing result
+                existing_result.passing_score = score
+                existing_result.total_questions = total_questions
             else:
-                enrollment = Enrollment(user_id=user.id, course_id=course.id)
-                db_session.add(enrollment)
-                db_session.commit() 
-                flash(f'You have successfully enrolled in {course.title}!', 'success')
+                quiz_result = QuizResult(
+                    user_id=user.id, 
+                    quiz_id=quiz.id, 
+                    passing_score=score,
+                    total_questions=total_questions
+                )
+                db_session.add(quiz_result)
+        
+        db_session.commit()
 
-            return redirect(url_for('course_list')) 
-        return render_template('courses.html', course=course)
-    
-    except Exception as e:
-        flash(f'An error occurred: {str(e)}', 'danger')
-        return redirect(url_for('course_content')) 
-    
+        percentage = (score / total_questions) * 100 if total_questions > 0 else 0
+        flash(f'You scored {score}/{total_questions} ({percentage:.2f}%)', 'success')
+
+        return redirect(url_for('user_dashboard', course=course, lesson=lesson))
+
+    return render_template('quiz.html', course=course, lesson=lesson)
+
 
 @app.route('/user_courses/')
 def user_courses():
@@ -195,10 +298,26 @@ def user_courses():
     return "User not found", 404
 
 
+@app.route('/certificate/<int:user_id>/<int:course_id>')
+def certificate(user_id, course_id):
+    user = db_session.query(Users).get(user_id)
+    course = db_session.query(Course).get(course_id)
+    # instructor_name = "Your Instructor's Name"
+    completion_date = datetime.now()
+    instructor_name = "Shahid Raja"
 
-@app.route('/certificate/')
-def certificate():
-    return render_template('certificate.html')
+    if not user or not course:
+        flash("User or Course not found.", "danger")
+        return redirect(url_for('course_list'))
+
+    return render_template(
+        'certificate.html',
+        user=user,
+        course=course,
+        instructor_name=instructor_name,
+        completion_date=completion_date
+    )
+
 
 @app.route('/about/')
 def about():
@@ -228,6 +347,7 @@ def contact():
     
     return render_template('contact.html')
 
+
 #  Admin routes
 
 # Route to manage users
@@ -236,15 +356,18 @@ def admin_manage_users():
     if 'username' not in session or session.get('role') != 'admin':
         return redirect(url_for('login'))
     
-    users = db_session.query(Users).all()
+    users = db_session.query(Users).options(joinedload(Users.enrollments).joinedload(Enrollment.course)).all()
     return render_template('admin_manage_users.html', users=users)
 
 # Route to add a new user
+# For Adding User
 @app.route('/admin/add_user/', methods=['GET', 'POST'])
 def admin_add_user():
     if 'username' not in session or session.get('role') != 'admin':
         return redirect(url_for('login'))
     
+    courses = db_session.query(Course).all()
+
     if request.method == 'POST':
         fname = request.form['fname']
         lname = request.form['lname']
@@ -252,6 +375,7 @@ def admin_add_user():
         email = request.form['email']
         password = request.form['password']
         role = request.form['role']
+        enrolled_courses = request.form.getlist('enrolled_courses[]')
 
         hashed_password = generate_password_hash(password)
 
@@ -271,38 +395,66 @@ def admin_add_user():
 
         db_session.add(new_user)
         db_session.commit()
-        flash("User added successfully!", "success")
+
+        # Enroll user in selected courses
+        for course_id in enrolled_courses:
+            enrollment = Enrollment(user_id=new_user.id, course_id=int(course_id))
+            db_session.add(enrollment)
+
+        db_session.commit()
+
+        flash("User added successfully with enrolled courses!", "success")
         return redirect(url_for('admin_manage_users'))
     
-    return render_template('admin_add_user.html')
+    return render_template('admin_add_user.html', courses=courses)
 
-# Route to edit user details
+
+# For Editing User
 @app.route('/admin/edit_user/<int:user_id>/', methods=['GET', 'POST'])
 def admin_edit_user(user_id):
     if 'username' not in session or session.get('role') != 'admin':
         return redirect(url_for('login'))
     
     user = db_session.query(Users).get(user_id)
+    courses = db_session.query(Course).all()
+    user_enrollments = [enrollment.course_id for enrollment in db_session.query(Enrollment).filter_by(user_id=user.id).all()]
 
     if not user:
         flash("User not found!", "error")
         return redirect(url_for('admin_manage_users'))
     
     if request.method == 'POST':
+        # Update user info
         user.fname = request.form.get('fname')
         user.lname = request.form.get('lname')
         user.username = request.form.get('username')
         user.email = request.form.get('email')
-        # user.password = generate_password_hash(request.form['password'])
-        if 'password' in request.form and request.form['password']:
+        if request.form['password']:
             user.password = generate_password_hash(request.form['password'])
-
         user.role = request.form.get('role')
+
+        # Handle Course Enrollment Updates
+        selected_courses = list(map(int, request.form.getlist('enrolled_courses[]')))
+        current_enrollments = set(user_enrollments)
+
+        # Add new enrollments
+        for course_id in set(selected_courses) - current_enrollments:
+            db_session.add(Enrollment(user_id=user.id, course_id=course_id))
+
+        # Remove unchecked enrollments
+        for course_id in current_enrollments - set(selected_courses):
+            db_session.query(Enrollment).filter_by(user_id=user.id, course_id=course_id).delete()
+
         db_session.commit()
-        flash("User updated successfully!", "success")
+        flash("User updated successfully, including course enrollments!", "success")
         return redirect(url_for('admin_manage_users'))
     
-    return render_template('admin_edit_user.html', user=user)
+    return render_template(
+        'admin_edit_user.html', 
+        user=user, 
+        courses=courses, 
+        user_enrolled_course_ids=user_enrollments
+    )
 
 # Route to delete a user
 @app.route('/admin/delete_user/<int:user_id>/', methods=['POST'])
@@ -310,23 +462,23 @@ def admin_delete_user(user_id):
     if 'username' not in session or session.get('role') != 'admin':
         return redirect(url_for('login'))
     
-    user_to_delete = db_session.query(Users).get(user_id)
+    user = db_session.query(Users).get(user_id)
 
-    if not user_to_delete:
-        flash("User not found!", "error")
+    if not user:
+        flash("User not found!", "danger")
         return redirect(url_for('admin_manage_users'))
-    
+
     if request.method == 'POST':
-        db_session.delete(user_to_delete)
+        db_session.delete(user)
         db_session.commit()
         flash("User deleted successfully!", "success")
-    else:
-        flash("User not found!", "error")
+        return redirect(url_for('admin_manage_users'))
 
-    return redirect(url_for('admin_manage_users'))
+    # Render confirmation page
+    return render_template('admin_delete_user.html', user=user)
 
 # Route to confirm user deletion
-@app.route('/admin/delete_user/<int:user_id>/', methods=['GET'])
+@app.route('/admin/delete_user/<int:user_id>/', methods=['GET', 'POST'])
 def admin_delete_user_page(user_id):
     if 'username' not in session or session.get('role') != 'admin':
         return redirect(url_for('login'))
@@ -338,8 +490,29 @@ def admin_delete_user_page(user_id):
         flash("User not found!", "error")
         return redirect(url_for('admin_manage_users'))
     
+    if request.method == 'POST':
+        # Perform deletion
+        db_session.delete(user)
+        db_session.commit()
+        flash("User deleted successfully!", "success")
+        return redirect(url_for('admin_manage_users'))
+
+    # Render confirmation page on GET
     return render_template('admin_delete_user.html', user=user)
 
+@app.route('/admin/user_progress/<int:user_id>')
+def admin_user_progress(user_id):
+    user = db_session.query(Users).filter_by(id=user_id).first()
+    if not user:
+        flash('User not found!', 'danger')
+        return redirect(url_for('admin_manage_users'))
+
+    enrollments = db_session.query(Enrollment).filter_by(user_id=user_id).all()
+    quiz_results = db_session.query(QuizResult).filter_by(user_id=user_id).all()
+
+    return render_template('admin_user_progress.html', user=user, enrollments=enrollments, quiz_results=quiz_results)
+
+# -------------------------------------------------------------------------
 
 # Route to manage courses
 @app.route('/admin/manage_courses/')
@@ -358,13 +531,15 @@ def allowed_file(filename):
 
 @app.route('/admin/add_course/', methods=['POST', 'GET'])
 def admin_add_course():
-    course = None
+    if 'username' not in session or session.get('role') != 'admin':
+        flash("Access Denied! Admins only.", "danger")
+        return redirect(url_for('login'))
+
     if request.method == 'POST':
         try:
-            title = request.form['title']  # Get from form
-            description = request.form['description']  # Get from form
+            title = request.form['title']
+            description = request.form['description']
             course_thumbnail = None
-            #request.form.get('course_thumbnail') # Optional thumbnail
 
             if 'course_thumbnail' in request.files:
                 file = request.files['course_thumbnail']
@@ -373,67 +548,50 @@ def admin_add_course():
                     file.save(os.path.join('static/img', filename))
                     course_thumbnail = filename
 
-            lessons_data_str = request.form.get('lessons')
-            if lessons_data_str: # Check if it's not None or empty
-                try:
-                    lessons_list = json.loads(lessons_data_str)  # Parse JSON
-                except json.JSONDecodeError as e:
-                    db_session.rollback() # Important to rollback on error
-                    flash(f"Invalid JSON for lessons: {e}", "error")
-                    return render_template('admin_add_course.html') # Return to the form
-            else:
-                lessons_list = [] # Handle the case where no lessons are provided
-
-            new_course = Course(title=title, description=description, course_thumbnail=course_thumbnail)
+            new_course = Course(title=title,
+                                description=description, course_thumbnail=course_thumbnail
+                                )
             db_session.add(new_course)
-            db_session.flush() # Get the new course ID
+            db_session.flush()
 
-            for lesson in lessons_list:
-                new_lesson = Lesson(
-                    title=lesson['title'],
-                    content=lesson['content'],
-                    course_link=lesson['course_link'],
-                    course_id=new_course.id
-                )
+            # Adding Lessons
+            lesson_titles = request.form.getlist('lesson_title[]')
+            lesson_contents = request.form.getlist('lesson_content[]')
+            lesson_links = request.form.getlist('lesson_link[]')
+
+            for i in range(len(lesson_titles)):
+                new_lesson = Lesson(title=lesson_titles[i],
+                                    content=lesson_contents[i], 
+                                    course_link=lesson_links[i], course_id=new_course.id
+                                    )
                 db_session.add(new_lesson)
 
+            new_quiz = Quiz(title=f"Quiz for {new_course.title}", course_id=new_course.id)
+            db_session.add(new_quiz)
+            db_session.flush()
+
+            # Adding Quizzes
+            quiz_questions = request.form.getlist('quiz_question[]')
+            options_A = request.form.getlist('option_A[]')
+            options_B = request.form.getlist('option_B[]')
+            options_C = request.form.getlist('option_C[]')
+            options_D = request.form.getlist('option_D[]')
+            correct_answers = request.form.getlist('correct_answer[]')
+
+            for i in range(len(quiz_questions)):
+                new_question = Question(question=quiz_questions[i],
+                                    option_A=options_A[i], option_B=options_B[i], option_C=options_C[i], option_D=options_D[i], answer=correct_answers[i], quiz_id=new_quiz.id
+                                    )
+                db_session.add(new_question)
+
             db_session.commit()
-            flash("Course and lessons added successfully.", "success")
-            return redirect(url_for('admin_manage_courses')) # Redirect after success
-
+            flash("Course, lessons, and quizzes added successfully!", "success")
+            return redirect(url_for('admin_manage_courses'))
         except Exception as e:
-            db_session.rollback() # Rollback on error
+            db_session.rollback()
             flash(f"Error adding course: {e}", "error")
-            print(f"Error details: {e}") #Print for debugging
-            return render_template('admin_add_course.html') # Return to form on error
 
-    return render_template('admin_add_course.html', course=course)
-
-@app.route('/course/<int:course_id>/')
-def course_content(course_id):
-    if 'username' not in session:
-        return redirect(url_for('login'))
-    
-    course = db_session.query(Course).get(course_id)
-    if not course:
-        flash("Course not found!", "error")
-        return redirect(url_for('course_list'))
-    
-    user = db_session.query(Users).filter_by(username=session['username']).first()
-    if not user or not user.is_enrolled(course):
-        flash("You need to enroll in this course to access lessons.", "warning")
-        # return redirect(url_for('course_list'))
-
-    return render_template('course_content.html', course=course)
-
-@app.route('/course/<int:course_id>/lesson/<int:lesson_id>/')
-def start_lesson(course_id, lesson_id):
-    course = db_session.query(Course).get(course_id)
-    lesson = db_session.query(Lesson).get(lesson_id)
-    if not lesson:
-        flash("Lesson not found!", "error")
-        return redirect(url_for('course_content', course_id=course_id))
-    return render_template('start_lesson.html', lesson=lesson,course_id=course_id)
+    return render_template('admin_add_course.html')
 
 
 # Route to delete a course
@@ -484,59 +642,234 @@ def admin_delete_lesson(lesson_id):
 @app.route('/admin/update_course/<int:course_id>/', methods=['GET', 'POST'])
 def admin_update_course(course_id):
     if 'username' not in session or session.get('role') != 'admin':
+        flash("Access Denied! Admins only.", "danger")
         return redirect(url_for('login'))
-    
+
     course = db_session.query(Course).get(course_id)
     if not course:
         flash("Course not found!", "error")
         return redirect(url_for('admin_manage_courses'))
-    
+
     if request.method == 'POST':
+        try:
+            course.title = request.form['title']
+            course.description = request.form['description']
 
-        course.title = request.form['title']
-        course.description = request.form['description']
+            if 'course_thumbnail' in request.files:
+                file = request.files['course_thumbnail']
+                if file and allowed_file(file.filename):
+                    filename = secure_filename(file.filename)
+                    file.save(os.path.join('static/img', filename))
+                    course.course_thumbnail = filename
 
-        if 'course_thumbnail' in request.files:
-            file = request.files['course_thumbnail']
-            if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                file.save(os.path.join('static/img', filename))
-                course.course_thumbnail = filename
+            lesson_ids = request.form.getlist('lesson_id[]')
+            lesson_titles = request.form.getlist('lesson_title[]')
+            lesson_contents = request.form.getlist('lesson_content[]')
+            lesson_links = request.form.getlist('lesson_link[]')
 
-        lesson_ids = request.form.getlist('lesson_id[]')
-        lesson_titles = request.form.getlist('lesson_title[]')
-        lesson_contents = request.form.getlist('lesson_content[]')
-        lesson_links = request.form.getlist('lesson_link[]')
+            for i in range(len(lesson_titles)):
+                if i < len(lesson_ids) and lesson_ids[i]:  # Ensure lesson_ids exists
+                    lesson = db_session.query(Lesson).get(int(lesson_ids[i]))
+                    if lesson:
+                        lesson.title = lesson_titles[i]
+                        lesson.content = lesson_contents[i]
+                        lesson.course_link = lesson_links[i]
+                else:  # If new lesson
+                    new_lesson = Lesson(
+                        title=lesson_titles[i],
+                        content=lesson_contents[i],
+                        course_link=lesson_links[i],
+                        course_id=course.id
+                    )
+                    db_session.add(new_lesson)
 
-        for i in range(len(lesson_titles)):
-            if lesson_ids and lesson_ids[i]:  # Existing lesson
-                lesson = db_session.query(Lesson).get(lesson_ids[i])
-                if lesson:
-                    lesson.title = lesson_titles[i]
-                    lesson.content = lesson_contents[i]
-                    lesson.course_link = lesson_links[i]
-            else:  # New lesson
-                new_lesson = Lesson(
-                    title=lesson_titles[i],
-                    content=lesson_contents[i],
-                    course_link=lesson_links[i],
-                    course_id=course.id
-                )
-                db_session.add(new_lesson)
+            existing_quiz = db_session.query(Quiz).filter_by(course_id=course.id).first()
+            if not existing_quiz:
+                existing_quiz = Quiz(title=f"Quiz for {course.title}", course_id=course.id)
+                db_session.add(existing_quiz)
+                db_session.flush()
 
-        db_session.commit()
+            quiz_ids = request.form.getlist('quiz_id[]')
+            quiz_questions = request.form.getlist('quiz_question[]')
+            options_A = request.form.getlist('option_A[]')
+            options_B = request.form.getlist('option_B[]')
+            options_C = request.form.getlist('option_C[]')
+            options_D = request.form.getlist('option_D[]')
+            correct_answers = request.form.getlist('correct_answer[]')
 
-        flash("Course and lessons updated successfully!", "success")
-        return redirect(url_for('admin_manage_courses'))
-    
+            for i in range(len(quiz_questions)):
+                if i < len(quiz_ids) and quiz_ids[i]:
+                    question = db_session.query(Question).get(int(quiz_ids[i]))
+                    if question:
+                        question.question = quiz_questions[i]
+                        question.option_A = options_A[i]
+                        question.option_B = options_B[i]
+                        question.option_C = options_C[i]
+                        question.option_D = options_D[i]
+                        question.answer = correct_answers[i]
+                else:
+                    new_question = Question(
+                        question=quiz_questions[i],
+                        option_A=options_A[i],
+                        option_B=options_B[i],
+                        option_C=options_C[i],
+                        option_D=options_D[i],
+                        answer=correct_answers[i],
+                        quiz_id=existing_quiz.id
+                    )
+                    db_session.add(new_question)
+
+            db_session.commit()
+
+            flash("Course and lessons updated successfully!", "success")
+            return redirect(url_for('admin_manage_courses'))
+
+        except Exception as e:
+            db_session.rollback()
+            flash(f"Error updating course: {e}", "error")
+
     return render_template('admin_update_course.html', course=course)
 
-@app.route('/admin/reports/')
-def admin_reports():
+# View all quizzes
+@app.route('/admin/manage_quizzes/')
+def admin_manage_quizzes():
     if 'username' not in session or session.get('role') != 'admin':
+        flash("Access Denied! Admins only.", "danger")
         return redirect(url_for('login'))
-    # Render reports page
-    return render_template('admin_reports.html')
+
+    quizzes = db_session.query(Quiz).all()
+    courses = db_session.query(Course).all()  # ✅ Fetch all courses
+
+    return render_template('admin_manage_quizzes.html', quizzes=quizzes, courses=courses)
+
+@app.route('/admin/add_quiz/', methods=['POST'])
+def admin_add_quiz():
+    if 'username' not in session or session.get('role') != 'admin':
+        flash("Access Denied! Admins only.", "danger")
+        return redirect(url_for('login'))
+
+    title = request.form['quiz_title']
+    course_id = request.form['course_id']
+
+    new_quiz = Quiz(title=title, course_id=course_id)
+    db_session.add(new_quiz)
+    db_session.commit()
+
+    # Now, add questions
+    questions = request.form.getlist('quiz_question[]')
+    options_A = request.form.getlist('option_A[]')
+    options_B = request.form.getlist('option_B[]')
+    options_C = request.form.getlist('option_C[]')
+    options_D = request.form.getlist('option_D[]')
+    correct_answers = request.form.getlist('correct_answer[]')
+
+    for q_text, opt_A, opt_B, opt_C, opt_D, correct_ans in zip(questions, options_A, options_B, options_C, options_D, correct_answers):
+        new_question = Question(
+            question=q_text,
+            option_A=opt_A,
+            option_B=opt_B,
+            option_C=opt_C,
+            option_D=opt_D,
+            answer=correct_ans,
+            quiz_id=new_quiz.id
+        )
+        db_session.add(new_question)
+
+    db_session.commit()
+
+    flash('Quiz and questions created successfully!', 'success')
+    return redirect(url_for('admin_manage_quizzes'))
+
+    # try:
+    #     # Convert course_id and lesson_id to integers
+    #     course_id = int(course_id)
+    #     lesson_id = int(lesson_id) if lesson_id else None
+
+    #     # Create and save the new quiz
+    #     new_quiz = Quiz(title=title, course_id=course_id, lesson_id=lesson_id)
+    #     db_session.add(new_quiz)
+    #     db_session.commit()
+
+    #     flash('Quiz created successfully!', 'success')
+    # except ValueError:
+    #     flash("Invalid Course or Lesson ID.", "danger")
+    # except Exception as e:
+    #     flash(f"An error occurred: {str(e)}", "danger")
+
+    # return redirect(url_for('admin_manage_quizzes'))
+
+# Edit a quiz
+@app.route('/admin/edit_quiz/<int:quiz_id>', methods=['GET', 'POST'])
+def admin_edit_quiz(quiz_id):
+    quiz = db_session.query(Quiz).options(joinedload(Quiz.quiz_questions)).filter_by(id=quiz_id).first()
+
+    if not quiz:
+        flash('Quiz not found!', 'danger')
+        return redirect(url_for('admin_manage_quizzes'))
+    
+    if request.method == 'POST':
+        # Update quiz title
+        quiz.title = request.form['title']
+
+        # --- Update Existing Questions ---
+        for question in quiz.quiz_questions:
+            question.question = request.form.get(f'question_{question.id}')
+            question.option_A = request.form.get(f'option_A_{question.id}')
+            question.option_B = request.form.get(f'option_B_{question.id}')
+            question.option_C = request.form.get(f'option_C_{question.id}')
+            question.option_D = request.form.get(f'option_D_{question.id}')
+            question.answer = request.form.get(f'answer_{question.id}')
+
+        # --- Add New Questions ---
+        new_questions = request.form.getlist('new_question[]')
+        new_options_A = request.form.getlist('new_option_A[]')
+        new_options_B = request.form.getlist('new_option_B[]')
+        new_options_C = request.form.getlist('new_option_C[]')
+        new_options_D = request.form.getlist('new_option_D[]')
+        new_answers = request.form.getlist('new_answer[]')
+
+        for q_text, opt_A, opt_B, opt_C, opt_D, ans in zip(new_questions, new_options_A, new_options_B, new_options_C, new_options_D, new_answers):
+            if q_text and ans: 
+                new_question = Question(
+                    question=q_text,
+                    option_A=opt_A,
+                    option_B=opt_B,
+                    option_C=opt_C,
+                    option_D=opt_D,
+                    answer=ans,
+                    quiz_id=quiz.id 
+                )
+                db_session.add(new_question)
+
+        db_session.commit()
+        flash('Quiz updated successfully!', 'success')
+        return redirect(url_for('admin_manage_quizzes'))
+
+    return render_template('admin_edit_quiz.html', quiz=quiz)
+
+# Delete a quiz
+@app.route('/admin/delete_quiz/<int:quiz_id>', methods=['POST', 'GET'])
+def admin_delete_quiz(quiz_id):
+    quiz = db_session.query(Quiz).filter_by(id=quiz_id).first()
+    if quiz:
+        db_session.delete(quiz)
+        db_session.commit()
+        flash('Quiz deleted successfully.', 'success')
+    else:
+        flash('Quiz not found.', 'danger')
+    return redirect(url_for('admin_manage_quizzes'))
+
+@app.route('/admin/delete_question/<int:question_id>', methods=['GET'])
+def delete_question(question_id):
+    question = db_session.query(Question).filter_by(id=question_id).first()
+    if question:
+        db_session.delete(question)
+        db_session.commit()
+        flash('Question deleted successfully.', 'success')
+    else:
+        flash('Question not found.', 'danger')
+    return redirect(request.referrer)
+
 
 @app.route('/admin_dashboard/')
 def admin_dashboard():
@@ -550,24 +883,38 @@ def admin_dashboard():
 
     # print(f"Admin: {username}, Password: {password}")
 
-    return render_template('admin_dashboard.html', 
-        user={'username': session['username'], 'email': user_db[session['username']]['email']})
+    user = db_session.query(Users).filter_by(username=session['username']).first()
+    courses = db_session.query(Course).all()
+
+    return render_template('admin_dashboard.html',user = user, courses=courses ) 
+        
 
 @app.route('/user_dashboard/')
 def user_dashboard():
     if 'username' not in session or session.get('role') != 'user':
         flash("Access Denied! Users only.", "danger")
         return redirect(url_for('login')) 
-    
-    username = session['username']  # The username from the session
 
-    return render_template('user_dashboard.html', 
-        user={'username': username, 'email': user_db[username]['email']})
+    user = db_session.query(Users).filter_by(username=session['username']).first()
+
+    # Fetch only courses the user is enrolled in
+    enrolled_courses = (
+        db_session.query(Course)
+        .join(Enrollment, Enrollment.course_id == Course.id)
+        .filter(Enrollment.user_id == user.id)
+        .all()
+    )
+
+    return render_template('user_dashboard.html', user=user, courses=enrolled_courses)
 
 @app.route('/user_progress/')
 def user_progress():
-    return render_template('user_progress.html')
- 
+    user = db_session.query(Users).filter_by(username=session['username']).first()
+    enrolled_courses = db_session.query(Enrollment).filter_by(user_id=user.id).all()
+    quiz_results = db_session.query(QuizResult).filter_by(user_id=user.id).all()
+
+    return render_template('user_progress.html', user=user, enrolled_courses=enrolled_courses, quiz_results=quiz_results)
+
 @app.errorhandler(500)
 def internal_server_error(error):
     return render_template('500.html'), 500
@@ -595,5 +942,4 @@ def logout():
     return redirect(url_for('login'))
 
 if __name__ == '__main__':
- 
     app.run(debug=True)

@@ -1,0 +1,135 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center text-white bg-dark py-3 rounded">Manage Quizzes</h1>
+
+    <div class="d-flex justify-content-between align-items-center my-4">
+        <h3>All Quizzes</h3>
+        <a href="#addQuizForm" class="btn btn-primary">
+            <i class="fas fa-plus"></i> Add New Quiz
+        </a>
+    </div>
+
+    <!-- Existing Quizzes Section -->
+    {% if quizzes %}
+        <table class="table table-dark table-hover shadow">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Quiz Title</th>
+                    <th>Course</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for quiz in quizzes %}
+                <tr>
+                    <td>{{ quiz.id }}</td>
+                    <td>{{ quiz.title }}</td>
+                    <td>{{ quiz.course.title }}</td>
+                    <td>
+                        <a href="{{ url_for('admin_edit_quiz', quiz_id=quiz.id) }}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit"></i> Update
+                        </a>
+                        <form action="{{ url_for('admin_delete_quiz', quiz_id=quiz.id) }}" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Are you sure you want to delete this quiz?');">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <div class="alert alert-info text-center">No quizzes found. Add a new quiz below.</div>
+    {% endif %}
+
+    <!-- Add New Quiz Section -->
+    <h3 id="addQuizForm" class="mt-5">Add New Quiz</h3>
+    <form method="POST" action="{{ url_for('admin_add_quiz') }}" class="bg-light p-4 rounded shadow">
+        <!-- Select Course -->
+        <div class="mb-3">
+            <label for="course" class="form-label"><strong>Select Course</strong></label>
+            <select class="form-control" name="course_id" required>
+                <option value="" disabled selected>Select a course</option>
+                {% for course in courses %}
+                    <option value="{{ course.id }}">{{ course.title }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Quiz Title -->
+        <div class="mb-3">
+            <label for="title" class="form-label"><strong>Quiz Title</strong></label>
+            <input type="text" class="form-control" name="quiz_title" placeholder="Enter quiz title" required>
+        </div>
+
+        <!-- Quiz Questions Section -->
+        <h4 class="mt-4">Questions</h4>
+        <div id="quiz-list">
+            <div class="quiz-item mb-3 p-3 border rounded">
+                <input type="text" class="form-control mb-2" name="quiz_question[]" placeholder="Quiz Question" required>
+                <input type="text" class="form-control mb-2" name="option_A[]" placeholder="Option A" required>
+                <input type="text" class="form-control mb-2" name="option_B[]" placeholder="Option B" required>
+                <input type="text" class="form-control mb-2" name="option_C[]" placeholder="Option C" required>
+                <input type="text" class="form-control mb-2" name="option_D[]" placeholder="Option D" required>
+                <select class="form-control mb-2" name="correct_answer[]">
+                    <option value="A">Correct Answer: A</option>
+                    <option value="B">Correct Answer: B</option>
+                    <option value="C">Correct Answer: C</option>
+                    <option value="D">Correct Answer: D</option>
+                </select>
+                <button type="button" class="btn btn-danger btn-sm" onclick="removeQuiz(this)">
+                    <i class="fas fa-trash"></i> Remove Question
+                </button>
+            </div>
+        </div>
+
+        <button type="button" class="btn btn-secondary mb-3" onclick="addQuiz()">
+            <i class="fas fa-plus"></i> Add Another Question
+        </button>
+
+        <!-- Submit Button -->
+        <div class="text-center">
+            <button type="submit" class="btn btn-success px-5">Submit Quiz</button>
+        </div>
+    </form>
+
+    <!-- Back to Dashboard -->
+    <div class="text-center mt-4">
+        <a href="{{ url_for('admin_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+</div>
+
+<!-- Quiz Form JavaScript -->
+<script>
+function addQuiz() {
+    let quizList = document.getElementById('quiz-list');
+    let newQuiz = document.createElement('div');
+    newQuiz.classList.add('quiz-item', 'mb-3', 'p-3', 'border', 'rounded');
+    newQuiz.innerHTML = `
+        <input type="text" class="form-control mb-2" name="quiz_question[]" placeholder="Quiz Question" required>
+        <input type="text" class="form-control mb-2" name="option_A[]" placeholder="Option A" required>
+        <input type="text" class="form-control mb-2" name="option_B[]" placeholder="Option B" required>
+        <input type="text" class="form-control mb-2" name="option_C[]" placeholder="Option C" required>
+        <input type="text" class="form-control mb-2" name="option_D[]" placeholder="Option D" required>
+        <select class="form-control mb-2" name="correct_answer[]">
+            <option value="A">Correct Answer: A</option>
+            <option value="B">Correct Answer: B</option>
+            <option value="C">Correct Answer: C</option>
+            <option value="D">Correct Answer: D</option>
+        </select>
+        <button type="button" class="btn btn-danger btn-sm" onclick="removeQuiz(this)">
+            <i class="fas fa-trash"></i> Remove Question
+        </button>
+    `;
+    quizList.appendChild(newQuiz);
+}
+
+function removeQuiz(button) {
+    button.parentElement.remove();
+}
+</script>
+{% endblock %}

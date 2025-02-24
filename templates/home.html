@@ -7,27 +7,6 @@
         <p>Your gateway to mastering new skills and advancing your knowledge</p>
     </div>
 
-    <!-- About Us Section -->
-    <section id="about" class="py-5">
-        <div class="container">
-            <h2 class="text-center">About Us</h2>
-            <div class="row">
-                <div class="col-md-6">
-                    <p>Welcome to My_Academy, your go-to platform for online learning. Our mission is to provide high-quality educational resources that empower learners to achieve their goals.</p>
-                    <ul>
-                        <li>Comprehensive courses across various subjects.</li>
-                        <li>Interactive lessons and quizzes to enhance learning.</li>
-                        <li>Progress tracking to help you stay on course.</li>
-                        <li>A community of learners and instructors for support.</li>
-                    </ul>
-                </div>
-                <div class="col-md-6">
-                    <img src="{{ url_for('static', filename='img/about.jpeg') }}" class="img-fluid" alt="about">
-                </div>
-            </div>
-        </div>
-    </section>
-
     <hr>
 
     <!-- Courses Section -->
@@ -37,13 +16,17 @@
             <div class="row">
                 {% for course in courses %}
                     <div class="col-md-4 mb-4">
-                        <!-- <div class="card h-100">
-                            <img src="{{ url_for('static', filename='img/' + course.image) }}" class="card-img-top" alt="{{ course.title }}"> -->
+                        <div class="card h-100">
+                            {% if course.course_thumbnail %}
+                                <img src="{{ url_for('static', filename='img/' + course.course_thumbnail) }}" class="card-img-top" alt="{{ course.title }}">
+                            {% else %}
+                                <img src="{{ url_for('static', filename='img/logo.jpg') }}" class="card-img-top" alt="Default Thumbnail">
+                            {% endif %}
                             <div class="card-body">
                                 <h5 class="card-title">{{ course.title }}</h5>
                                 <p class="card-text">{{ course.description }}</p>
                                 <a href="{{ url_for('course_content', course_id=course.id) }}" class="btn btn-primary">View Course</a>
-                                <form action="{{ url_for('enroll', course_id=course.id) }}" method="POST" style="display: inline">
+                                <form action="{{ url_for('enroll_in_course', course_id=course.id) }}" method="POST" style="display: inline">
                                     <input type="hidden" name="course_id" value="{{ course.id }}" />
                                     <button type="submit" class="btn btn-success">Enroll</button>
                                 </form>
@@ -51,35 +34,6 @@
                         </div>
                     </div>
                 {% endfor %}
-            </div>
-        </div>
-    </section>
-
-    <hr>
-
-    <!-- Contact Us Section -->
-    <section id="contact" class="py-5">
-        <div class="container">
-            <h2 class="text-center">Contact Us</h2>
-            <p class="text-center">Have questions or feedback? Get in touch with us.</p>
-            <div class="row justify-content-center">
-                <div class="col-md-6">
-                    <form>
-                        <div class="mb-3">
-                            <label for="name" class="form-label">Name</label>
-                            <input type="text" class="form-control" id="name" required />
-                        </div>
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email</label>
-                            <input type="email" class="form-control" id="email" required />
-                        </div>
-                        <div class="mb-3">
-                            <label for="message" class="form-label">Message</label>
-                            <textarea class="form-control" id="message" rows="4" required></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary">Send Message</button>
-                    </form>
-                </div>
             </div>
         </div>
     </section>
@@ -122,5 +76,56 @@
             </button>
         </div>
     </section>
+
+    <!-- About Us Section -->
+    <section id="about" class="py-5">
+        <div class="container">
+            <h2 class="text-center">About Us</h2>
+            <div class="row">
+                <div class="col-md-6">
+                    <p>Welcome to My_Academy, your go-to platform for online learning. Our mission is to provide high-quality educational resources that empower learners to achieve their goals.</p>
+                    <ul>
+                        <li>Comprehensive courses across various subjects.</li>
+                        <li>Interactive lessons and quizzes to enhance learning.</li>
+                        <li>Progress tracking to help you stay on course.</li>
+                        <li>A community of learners and instructors for support.</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <img src="{{ url_for('static', filename='img/about.jpeg') }}" class="img-fluid" alt="about">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <hr>
+
+    <!-- Contact Us Section -->
+    <section id="contact" class="py-5">
+        <div class="container">
+            <h2 class="text-center">Contact Us</h2>
+            <p class="text-center">Have questions or feedback? Get in touch with us.</p>
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <form>
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Name</label>
+                            <input type="text" class="form-control" id="name" required />
+                        </div>
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="email" required />
+                        </div>
+                        <div class="mb-3">
+                            <label for="message" class="form-label">Message</label>
+                            <textarea class="form-control" id="message" rows="4" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Send Message</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+
 
 {% endblock %}

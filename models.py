@@ -7,7 +7,7 @@ Base = declarative_base()
 #     1: {'title': 'HTML & CSS', 'description': 'Learn the fundamentals of web development with HTML and CSS.', 
 #         'image': 'html_css_icon.jpeg',
 #     'lessons': [
-#         {'id': 1, 'title': 'Introduction to HTML & CSS', 'description': 'Learn the basics of HTML and CSS.'},
+#         {'id': 1, 'title': 'Introduction to HTML & CSS', 'description': 'Introduction to HTML & CSS.'},
 #         {'id': 2, 'title': 'CSS Basics', 'description': 'Learn how to style your web pages with CSS.'}
 #     ]},
 #     2: {'title': 'JavaScript', 'description': 'Dive into JavaScript for dynamic web content.', 
@@ -36,7 +36,11 @@ class Users(Base):
     password = Column(String(100), nullable=False)
     # progress = relationship('UserProgress', back_populates='user', cascade="all, delete-orphan")
     enrollments = relationship('Enrollment', back_populates='user', cascade="all, delete-orphan")
+    quiz_results = relationship('QuizResult', back_populates='user', cascade="all, delete-orphan")
     # answers = relationship('UserAnswer', back_populates='user', cascade="all, delete-orphan")
+
+    def is_enrolled(self, course):
+        return any(enrollment.course_id == course.id for enrollment in self.enrollments)
 
 # Course Model
 class Course(Base):
@@ -74,18 +78,23 @@ class Lesson(Base):
 
     # Relationship with Course
     course = relationship('Course', back_populates='lessons')
+    quizzes = relationship('Quiz', back_populates='lesson')  # ✅ Add backref to quizzes
 
 # Quiz Model
 class Quiz(Base):
     __tablename__ = 'quizzes'
     id = Column(Integer, primary_key=True)
     title = Column(String(255), nullable=False)
-    passing_score = Column(Integer, nullable=False, default=50)
+    # passing_score = Column(Integer, nullable=False, default=50)
     course_id = Column(Integer, ForeignKey('courses.id'), nullable=False)
+    lesson_id = Column(Integer, ForeignKey('lessons.id'), nullable=True)
 
     # Relationship with Course and Questions
     course = relationship('Course', back_populates='quizzes')
-    quiz_questions = relationship('Question', back_populates='quiz', lazy=True)
+    quiz_questions = relationship('Question', back_populates='quiz', lazy='subquery')
+    lesson = relationship('Lesson')  # Link to Lesson
+    quiz_results = relationship('QuizResult', back_populates='quiz', cascade="all, delete-orphan")
+
 
 # QuizResult Model
 class QuizResult(Base):
@@ -94,10 +103,11 @@ class QuizResult(Base):
     user_id = Column(Integer, ForeignKey('users.id'), nullable=True)
     quiz_id = Column(Integer, ForeignKey('quizzes.id'), nullable=True)
     passing_score = Column(Integer, nullable=False)
+    total_questions = Column(Integer, nullable=False)
 
     # Relationship with User and Quiz
-    user = relationship('Users', backref='quiz_results')
-    quiz = relationship('Quiz', backref='quiz_results')
+    user = relationship('Users', back_populates='quiz_results')
+    quiz = relationship('Quiz', back_populates='quiz_results')
 
 # Question Model
 class Question(Base):
